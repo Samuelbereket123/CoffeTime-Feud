@@ -1,33 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ☕ Coffee Time Feud
 
-## Getting Started
+A fun and interactive Family Feud style game with a coffee theme, built with Next.js and TypeScript.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Multiple categories of questions
+- Timer for each question
+- Score tracking for two teams
+- Responsive design that works on all devices
+- Fun animations and sound effects
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+3. Run the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🎮 How to Play
 
-## Learn More
+1. Select a category
+2. Take turns with another team
+3. Reveal answers by clicking on them
+4. Score points for each correct answer
+5. The team with the most points wins!
 
-To learn more about Next.js, take a look at the following resources:
+## 📝 Adding Questions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Edit the `data/questions.ts` file to add or modify questions. Each question should have:
+- A question text
+- An array of answers (in order of points)
+- A category
+- A difficulty level (easy, medium, hard)
+- A time limit in seconds
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠️ Built With
+
+- [Next.js](https://nextjs.org/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [React](https://reactjs.org/)
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to submit issues and pull requests.
 
 ## Deploy on Vercel
 

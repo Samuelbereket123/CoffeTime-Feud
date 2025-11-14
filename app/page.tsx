@@ -1,10 +1,34 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { questions, categories, Question } from '../data/questions';
+import { questions as initialQuestions, Question } from '../data/questions';
 import Scoreboard from '../components/Scoreboard';
 import QuestionCard from '../components/QuestionCard';
 import Timer from '../components/Timer';
+import AddQuestionForm from '../components/AddQuestionForm';
+
+// Save questions to localStorage
+const saveQuestions = (questions: Question[]) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('coffeeFeudQuestions', JSON.stringify(questions));
+  }
+};
+
+// Load questions from localStorage or use initial questions
+const loadQuestions = (): Question[] => {
+  if (typeof window === 'undefined') return [];
+  
+  const saved = localStorage.getItem('coffeeFeudQuestions');
+  if (!saved) return [];
+  
+  // Parse and ensure all questions have the required fields
+  const parsed = JSON.parse(saved);
+  return parsed.map((question: any) => ({
+    ...question,
+    difficulty: question.difficulty || 'Medium',
+    timeLimit: question.timeLimit || 30
+  }));
+};
 
 export default function Home() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -14,20 +38,46 @@ export default function Home() {
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [timeUp, setTimeUp] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>(questions);
   const [isPaused, setIsPaused] = useState(false);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
+  const [showAddQuestion, setShowAddQuestion] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-  // Filter questions by selected category
-  useEffect(() => {
-    if (selectedCategory === 'All') {
-      setFilteredQuestions(questions);
-    } else {
-      setFilteredQuestions(questions.filter(q => q.category === selectedCategory));
-    }
-    setCurrentQuestionIndex(0);
-    setRevealedIndices([]);
+  // Handle adding a new question
+  const handleAddQuestion = useCallback((newQuestion: Omit<Question, 'id'>) => {
+    const questionWithId = { ...newQuestion, id: Date.now().toString() };
+    setQuestions(prevQuestions => {
+      const updatedQuestions = [...prevQuestions, questionWithId];
+      saveQuestions(updatedQuestions);
+      
+      // If the new question matches the current category, update filtered questions
+      if (selectedCategory === 'All' || newQuestion.category === selectedCategory) {
+        setFilteredQuestions(prev => [...prev, questionWithId]);
+      }
+      
+      return updatedQuestions;
+    });
   }, [selectedCategory]);
+
+  // Load questions from localStorage on component mount
+  useEffect(() => {
+    const loadedQuestions = loadQuestions();
+    setQuestions(loadedQuestions);
+    setFilteredQuestions(loadedQuestions);
+    setIsLoading(false);
+    
+    // If no questions exist, show the add question form
+    if (loadedQuestions.length === 0) {
+      setShowAddQuestion(true);
+    }
+  }, []);
+
+  // Set filtered questions to all questions (no category filtering)
+  useEffect(() => {
+    setFilteredQuestions(questions);
+  }, [questions]);
 
   const currentQuestion = filteredQuestions[currentQuestionIndex];
   const allAnswersRevealed = currentQuestion && 
@@ -80,41 +130,97 @@ export default function Home() {
     setGameStarted(true);
   };
 
+  if (showAddQuestion) {
+    return (
+      <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Add New Question</h1>
+            <p className="text-gray-600">Fill in the details below to add a new question to the game</p>
+          </div>
+          
+          <div className="mb-8">
+            <AddQuestionForm 
+              onAddQuestion={handleAddQuestion} 
+            />
+          </div>
+          
+          <div className="text-center">
+            <button
+              onClick={() => setShowAddQuestion(false)}
+              className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              ← Back to Game
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <main className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Welcome to Coffee Time Feud!</h1>
+          <p className="text-gray-600 mb-8">Get started by adding your first question.</p>
+          <AddQuestionForm 
+            onAddQuestion={handleAddQuestion} 
+          />
+        </div>
+      </main>
+    );
+  }
+
   if (!gameStarted) {
     return (
-      <main className="min-h-screen bg-amber-50 flex flex-col items-center justify-center p-4">
-        <div className="text-center max-w-2xl">
-          <h1 className="text-5xl font-bold text-amber-800 mb-6">☕ Coffee Time Feud</h1>
-          <p className="text-xl text-amber-900 mb-8">A fun family feud style game all about coffee and morning routines!</p>
-          
-          <div className="mb-8 text-left">
-            <label className="block text-lg font-medium text-amber-900 mb-2">Select Category:</label>
-            <select 
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full p-3 rounded-lg border-2 border-amber-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            >
-              <option value="All">All Categories</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-            <p className="mt-2 text-sm text-amber-700">
-              {filteredQuestions.length} questions available in this category
+      <main className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8 md:p-10 transform transition-all duration-300 hover:shadow-2xl border border-amber-100">
+          <div className="text-center mb-10">
+            <div className="w-24 h-24 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-4xl">☕</span>
+            </div>
+            <h1 className="text-5xl font-extrabold bg-gradient-to-r from-amber-700 to-amber-900 bg-clip-text text-transparent mb-4">
+              Coffee Time Feud
+            </h1>
+            <p className="text-lg text-black max-w-lg mx-auto font-medium">
+              A fun, fast-paced game where you guess the top answers to coffee and morning-related questions!
             </p>
           </div>
           
-          <button
-            onClick={startGame}
-            disabled={filteredQuestions.length === 0}
-            className={`text-2xl font-bold py-4 px-8 rounded-full transition-colors shadow-lg ${
-              filteredQuestions.length === 0
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-amber-700 hover:bg-amber-800 text-white'
-            }`}
-          >
-            {filteredQuestions.length === 0 ? 'No Questions Available' : 'Start Game'}
-          </button>
+          <div className="text-center">
+            <button
+              onClick={startGame}
+              disabled={filteredQuestions.length === 0}
+              className={`relative overflow-hidden w-full max-w-xs mx-auto px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform transition-all duration-200 hover:scale-105`}
+            >
+              <span className="relative z-10 flex items-center justify-center">
+                {filteredQuestions.length === 0 ? (
+                  'No Questions Available'
+                ) : (
+                  'Start Game'
+                )}
+              </span>
+              {filteredQuestions.length > 0 && (
+                <span className="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600 opacity-0 hover:opacity-20 transition-opacity duration-300"></span>
+              )}
+            </button>
+            
+            <div className="mt-8 space-y-4">
+              <button
+                onClick={() => setShowAddQuestion(true)}
+                className="w-full max-w-xs mx-auto px-4 py-2 bg-amber-100 text-amber-800 rounded-md hover:bg-amber-200 transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Custom Question
+              </button>
+              <p className="text-sm text-gray-600">
+                Made with <span className="text-amber-800">☕</span> and <span className="text-red-600">❤️</span> for coffee lovers
+              </p>
+            </div>
+          </div>
         </div>
       </main>
     );
